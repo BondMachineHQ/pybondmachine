@@ -7,7 +7,8 @@ model_specs = {
     "batch_size": 16,
     "flavor": "axist",
     "n_input": 4,
-    "n_output": 2
+    "n_output": 2,
+    "board": "zedboard",
 }
 
 firmware_name = "firmware.bit"

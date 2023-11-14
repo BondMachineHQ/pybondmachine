@@ -50,14 +50,14 @@ class Predictor():
         
         return True, "Data loaded successfully"
     
-    def __predict_axist(self):
+    def __predict_axist(self, debug=False):
         axisthandler = AxiStreamHandler(self.overlay, self.model_specs, self.X_test, self.y_test)
-        return axisthandler.predict()
+        return axisthandler.predict(debug)
 
-    def __predict(self):
+    def __predict(self, debug=False):
         try:
             if (self.model_specs["flavor"] == "axist"):
-                return True, self.__predict_axist()
+                return True, self.__predict_axist(debug)
             elif (self.model_specs["flavor"] == "aximm"):
                 return False, "AXI-MM flavor not supported yet"
                 # return self.__predict_aximm()
@@ -75,7 +75,7 @@ class Predictor():
         return self.__load_data(dataset_X, dataset_y)
     
     @handle_config_error
-    def predict(self):
-        return self.__predict()
+    def predict(self, debug=False):
+        return self.__predict(debug)
 
 

@@ -1,11 +1,16 @@
 from pynq import DefaultHierarchy, DefaultIP, allocate
 import numpy as np
 import struct
+import time
 
 class AxiStreamHandler():
 
     def __init__(self, overlay, model_specs, X_test, y_test):
         self.firmware_name = overlay
+        self.supported_boards = {
+            'zynq': ['zedboard', 'ebaz4205'],
+            'alveo': ['u50']
+        }
         self.model_specs = model_specs
         self.batch_size = self.model_specs["batch_size"]
         self.X_test = X_test
@@ -102,20 +107,25 @@ class AxiStreamHandler():
 
     def __parse_prediction(self, outputs):
         hw_classifications = []
+        clock_cycles = []
+
         for outcome in outputs:
             for out in outcome:
                 
                 if self.datatype == "np.fps16f6":
                     probs = []
                     for i in range(0, self.n_output):
-                        prob = self.__fixed_to_float(out[i])
-                        probs.append(prob)
+                        if self.benchcore == True and i == self.n_output - 1:
+                            clock_cycles.append(out[i])
+                        else:
+                            prob = self.__fixed_to_float(out[i])
+                            probs.append(prob)
                 else:
                     probs = []
                     if self.model_specs['register_size'] == 16:
                         for i in range(0, self.n_output):
                             if self.benchcore == True and i == self.n_output - 1:
-                                probs.append(out[i])
+                                clock_cycles.append(out[i])
                             else:
                                 binary_str = bin(out[i])[2:]
                                 prob_float = self.__bin_to_float16(binary_str)
@@ -124,37 +134,76 @@ class AxiStreamHandler():
                     elif self.model_specs['register_size'] == 32:
                         for i in range(0, self.n_output):
                             if self.benchcore == True and i == self.n_output - 1:
-                                probs.append(out[i])
+                                clock_cycles.append(out[i])
                             else:
                                 binary_str = bin(out[i])[2:].zfill(32)
                                 prob_float = self.__bin_to_float32(binary_str)
                                 probs.append(prob_float)
                     
-                classification = np.argmax(probs[:-1])
+                classification = np.argmax(probs)
                 hw_classifications.append(int(classification))
 
-        return hw_classifications
+        return { 'predictions' : hw_classifications, 'clock_cycles': clock_cycles }
 
-    def predict(self):
-        outputs = []
-        data_type_input, data_type_output = self.__get_dtype()
+    def predict(self, debug=False):
 
-        input_buffer = allocate(shape=self.input_shape, dtype=data_type_input)
+        if self.model_specs['board'] in self.supported_boards['zynq']:
+            outputs = []
+            data_type_input, data_type_output = self.__get_dtype()
 
-        for i in range(0, len(self.batches)):
-            input_buffer[:]=self.batches[i]
+            input_buffer = allocate(shape=self.input_shape, dtype=data_type_input)
+            latencies = []
+
+            for i in range(0, len(self.batches)):
+                input_buffer[:]=self.batches[i]
+                output_buffer = allocate(shape=self.output_shape, dtype=data_type_output)
+                if debug:
+                    start_time = time.time()
+                self.sendchannel.transfer(input_buffer)
+                self.recvchannel.transfer(output_buffer)
+                self.sendchannel.wait()
+                self.recvchannel.wait()
+                if debug:
+                    end_time = time.time()
+                    time_diff = (end_time - start_time) * 1000
+                    latencies.append(time_diff)
+                if len(self.batches) == 1:
+                    outputs.append(output_buffer)
+                    return
+                if self.fill == True and i == len(self.batches) - 1:
+                    outputs.append(output_buffer[0:self.last_batch_size])
+                else:
+                    outputs.append(output_buffer)
+
+            if debug:
+                print("Time taken to predict a batch of size ", self.batch_size, " is ", np.mean(latencies), " ms")
+                print("Time taken to predict a single sample is ", np.mean(latencies)/self.batch_size, " ms")
+        else:
+            outputs = []
+            data_type_input, data_type_output = self.__get_dtype()
+
+            bm_krnl = self.overlay.krnl_bondmachine_rtl_1
+
+            input_buffer = allocate(shape=self.input_shape, dtype=data_type_input)
             output_buffer = allocate(shape=self.output_shape, dtype=data_type_output)
-            self.sendchannel.transfer(input_buffer)
-            self.recvchannel.transfer(output_buffer)
-            self.sendchannel.wait()
-            self.recvchannel.wait()
-            if len(self.batches) == 1:
-                outputs.append(output_buffer)
-                return
-            if self.fill == True and i == len(self.batches) - 1:
-                outputs.append(output_buffer[0:self.last_batch_size])
-            else:
-                outputs.append(output_buffer)
+
+            for i in range(0, len(self.batches)):
+                input_buffer[:]=self.batches[i]
+                input_buffer.sync_to_device()
+                bm_krnl.call(input_buffer, output_buffer)
+                output_buffer.sync_from_device()
+
+                if len(self.batches) == 1:
+                    outputs.append(output_buffer)
+                    return
+                if self.fill == True and i == len(self.batches) - 1:
+                    outputs.append(output_buffer[0:self.last_batch_size])
+                else:
+                    outputs.append(output_buffer)
 
         return self.__parse_prediction(outputs)
+            
+
+
+
 
