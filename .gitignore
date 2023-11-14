@@ -1,0 +1,7 @@
+pybondmachine.egg-info
+.pypirc
+pybondmachine/converters/__pycache__
+pybondmachine/prjmanager/__pycache__
+build
+dist
+reminder.txt
