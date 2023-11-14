@@ -200,7 +200,10 @@ class AxiStreamHandler():
                     outputs.append(output_buffer[0:self.last_batch_size])
                 else:
                     outputs.append(output_buffer)
-
+        
+        del input_buffer
+        del output_buffer
+        
         return self.__parse_prediction(outputs)
             
 
