@@ -32,10 +32,13 @@ class Predictor():
         self.overlay = None
         self.X_test = None
         self.y_test = None
+        self.handler = None
 
     def __load_overlay(self):
         try:
             self.overlay = Overlay(self.full_path)
+            if (self.model_specs["flavor"] == "axist"):
+                self.handler = AxiStreamHandler(self.overlay, self.model_specs, self.X_test, self.y_test)
         except Exception as e:
             return False, "Error loading the overlay. Error: "+str(e)
         
@@ -51,8 +54,7 @@ class Predictor():
         return True, "Data loaded successfully"
     
     def __predict_axist(self, debug=False):
-        axisthandler = AxiStreamHandler(self.overlay, self.model_specs, self.X_test, self.y_test)
-        return axisthandler.predict(debug)
+        return self.handler.predict(debug)
 
     def __predict(self, debug=False):
         try:
@@ -66,6 +68,14 @@ class Predictor():
         except Exception as e:
             return False, "Error predicting the data. Error: "+str(e)
         
+    def __release(self):
+        try:
+            self.handler.release()
+        except Exception as e:
+            return False, "Error predicting the data. Error: "+str(e)
+
+        return True, "Data released successfully"
+    
     @handle_config_error
     def load_overlay(self):
         return self.__load_overlay()
@@ -77,5 +87,9 @@ class Predictor():
     @handle_config_error
     def predict(self, debug=False):
         return self.__predict(debug)
+    
+    @handle_config_error
+    def release(self):
+        return self.__release()
 
 

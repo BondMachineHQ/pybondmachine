@@ -29,7 +29,8 @@ class AxiStreamHandler():
         self.datatype = None
         self.scale = None
         self.__initialize_datatype()
-        self.__init_channels()
+        if self.model_specs['board'] in self.supported_boards['zynq']:
+            self.__init_channels()
         if self.model_specs["data_type"][:3] == "fps":
             self.__initialize_fixedpoint()
         self.__prepare_data()
@@ -145,6 +146,9 @@ class AxiStreamHandler():
 
         return { 'predictions' : hw_classifications, 'clock_cycles': clock_cycles }
 
+    def release(self):
+        self.overlay.free()
+
     def predict(self, debug=False):
 
         if self.model_specs['board'] in self.supported_boards['zynq']:
@@ -185,10 +189,10 @@ class AxiStreamHandler():
             bm_krnl = self.overlay.krnl_bondmachine_rtl_1
 
             input_buffer = allocate(shape=self.input_shape, dtype=data_type_input)
-            output_buffer = allocate(shape=self.output_shape, dtype=data_type_output)
 
             for i in range(0, len(self.batches)):
                 input_buffer[:]=self.batches[i]
+                output_buffer = allocate(shape=self.output_shape, dtype=data_type_output)
                 input_buffer.sync_to_device()
                 bm_krnl.call(input_buffer, output_buffer)
                 output_buffer.sync_from_device()
@@ -201,10 +205,12 @@ class AxiStreamHandler():
                 else:
                     outputs.append(output_buffer)
         
+        result = self.__parse_prediction(outputs)
+
         del input_buffer
         del output_buffer
-        
-        return self.__parse_prediction(outputs)
+
+        return result
             
 
 

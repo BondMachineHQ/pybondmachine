@@ -15,8 +15,9 @@ firmware_name = "firmware.bit"
 firmware_path = os.getcwd()
 
 predictor = Predictor("firmware.bit", firmware_path, model_specs)
-predictor.load_overlay()
 predictor.load_data(os.getcwd()+"/X_test.npy", os.getcwd()+"/y_test.npy")
+predictor.load_overlay()
 predictions = predictor.predict()
+predictor.release()
 
 print(predictions)
