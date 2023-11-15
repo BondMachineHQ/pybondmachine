@@ -19,5 +19,3 @@ predictor.load_data(os.getcwd()+"/X_test.npy", os.getcwd()+"/y_test.npy")
 predictor.load_overlay()
 predictions = predictor.predict()
 predictor.release()
-
-print(predictions)

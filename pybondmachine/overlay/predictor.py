@@ -48,6 +48,9 @@ class Predictor():
         try:
             self.X_test = np.load(dataset_X)
             self.y_test = np.load(dataset_y)
+            if self.handler is not None:
+                self.handler.X_test = self.X_test
+                self.handler.y_test = self.y_test
         except Exception as e:
             return False, "Error loading the data. Error: "+str(e)
         

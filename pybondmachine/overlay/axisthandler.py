@@ -14,6 +14,7 @@ class AxiStreamHandler():
         self.model_specs = model_specs
         self.batch_size = self.model_specs["batch_size"]
         self.X_test = X_test
+        self.y_test = y_test
         self.samples_len = len(self.X_test)
         self.overlay = overlay
         self.fill = False

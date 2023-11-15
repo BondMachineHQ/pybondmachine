@@ -89,7 +89,8 @@ model_specs = {
     "flavor": "axist",
     "n_input": 4,
     "n_output": 2,
-    "benchcore": True
+    "benchcore": True,
+    "board": "zedboard"
 }
 </pre>
 
@@ -103,16 +104,25 @@ firmware_path = "proj_zedboard_axist_fp16_6_expanded_01/"
 <pre>
 predictor = Predictor("firmware.bit", firmware_path, model_specs)
 </pre>
-*Load the overlay i.e. program the FPGA*
-<pre>
-predictor.load_overlay()
-</pre>
 *Load the data to be processed*
 <pre>
 predictor.load_data("proj_zedboard_axist_fp16_6_expanded_01/banknote-authentication_X_test.npy", 
                     "proj_zedboard_axist_fp16_6_expanded_01/banknote-authentication_y_test.npy")
 </pre>
+*Load the overlay i.e. program the FPGA*
+*Remember that it is necessary that you call predictor.load_data before loading the overlay*
+<pre>
+predictor.load_overlay()
+</pre>
 *Perform inference*
 <pre>
 status, predictions = predictor.predict()
 </pre>
+
+
+## Phase 1 details under the hood
+This python package is basically a wrapper of the BondMachine helper tool. It allows you to create a project, to build the firmware and to convert a neural network model to a json file that can be used as input for the BondMachine framework. Or, if you prefer, you can use the library to create a custom accelerator.
+Under the hood, **bmhelper** create the project, modify all the parameters of the configuration files inside the project and it checks the dependencies. 
+Indeed, you can use bmhelper from CLI if you have installed it.
+So, to use the python library bmhelper is necessary and you can get it from here: [bmhelper](http://bondmachine.fisica.unipg.it/ug/) under the section "Installation".
+
