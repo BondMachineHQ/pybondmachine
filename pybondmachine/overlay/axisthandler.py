@@ -5,7 +5,7 @@ import time
 
 class AxiStreamHandler():
 
-    def __init__(self, overlay, model_specs, X_test, y_test):
+    def __init__(self, overlay, model_specs):
         self.firmware_name = overlay
         self.supported_boards = {
             'zynq': ['zedboard', 'ebaz4205'],
@@ -13,9 +13,6 @@ class AxiStreamHandler():
         }
         self.model_specs = model_specs
         self.batch_size = self.model_specs["batch_size"]
-        self.X_test = X_test
-        self.y_test = y_test
-        self.samples_len = len(self.X_test)
         self.overlay = overlay
         self.fill = False
         self.batches = []
@@ -34,7 +31,6 @@ class AxiStreamHandler():
             self.__init_channels()
         if self.model_specs["data_type"][:3] == "fps":
             self.__initialize_fixedpoint()
-        self.__prepare_data()
         
     def __bin_to_float16(self, binary_str):
         binary_bytes = int(binary_str, 2).to_bytes(2, byteorder='big')
@@ -50,25 +46,39 @@ class AxiStreamHandler():
         vec[:pad_width[0]] = np.random.uniform(0, 1, size=pad_width[0])
         vec[vec.size-pad_width[1]:] = np.random.uniform(0,1, size=pad_width[1])
 
-    def __prepare_data(self):
+    def prepare_data(self):
+        self.samples_len = len(self.X_test)
         n_batches = 0
         self.fill = False
-        if (self.samples_len/self.batch_size % 2 != 0):
-            n_batches = int(self.samples_len/self.batch_size) + 1
-            self.fill = True
-        else:
-            n_batches = int(self.samples_len/self.batch_size)
 
-        self.last_batch_size = 0
-        for i in range(0, n_batches):
-            new_batch = self.X_test[i*self.batch_size:(i+1)*self.batch_size]
-            if (len(new_batch) < self.batch_size):
-                self.last_batch_size = len(new_batch)
-                new_batch = np.pad(new_batch,  [(0, self.batch_size-len(new_batch)), (0,0)], mode=self.__random_pad)
-
+        if self.samples_len < self.batch_size:
+            num_rows = self.batch_size - self.X_test.shape[0]
+            zeros = np.random.rand(num_rows, self.X_test.shape[1])
+            self.X_test = np.concatenate((self.X_test, zeros), axis=0)
             if self.datatype == "np.fps16f6":
-                new_batch = np.vectorize(self.__float_to_fixed)(new_batch)
-            self.batches.append(new_batch)
+                self.X_test = np.vectorize(self.__float_to_fixed)(self.X_test)
+            self.batches.append(self.X_test)
+        else:
+            n_batches = 0
+            if self.samples_len == self.batch_size:
+                n_batches = 1
+            else:
+                if (self.samples_len/self.batch_size % 2 != 0):
+                    n_batches = int(self.samples_len/self.batch_size) + 1
+                    self.fill = True
+                else:
+                    n_batches = int(self.samples_len/self.batch_size)
+                
+            for i in range(0, n_batches):
+                new_batch = self.X_test[i*self.batch_size:(i+1)*self.batch_size]
+                if (len(new_batch) < self.batch_size):
+                    self._last_batch_size = len(new_batch)
+                    new_batch = np.pad(new_batch,  [(0, self.batch_size-len(new_batch)), (0,0)], mode=self.__random_pad)
+                
+                if self.datatype == "np.fps16f6":
+                    new_batch = np.vectorize(self.__float_to_fixed)(new_batch)
+                
+                self.batches.append(new_batch)
 
     def __init_channels(self):
         self.sendchannel = self.overlay.axi_dma_0.sendchannel
@@ -174,11 +184,11 @@ class AxiStreamHandler():
                     latencies.append(time_diff)
                 if len(self.batches) == 1:
                     outputs.append(output_buffer)
-                    return
-                if self.fill == True and i == len(self.batches) - 1:
-                    outputs.append(output_buffer[0:self.last_batch_size])
                 else:
-                    outputs.append(output_buffer)
+                    if self.fill == True and i == len(self.batches) - 1:
+                        outputs.append(output_buffer[0:self.last_batch_size])
+                    else:
+                        outputs.append(output_buffer)
 
             if debug:
                 print("Time taken to predict a batch of size ", self.batch_size, " is ", np.mean(latencies), " ms")
@@ -200,12 +210,12 @@ class AxiStreamHandler():
 
                 if len(self.batches) == 1:
                     outputs.append(output_buffer)
-                    return
-                if self.fill == True and i == len(self.batches) - 1:
-                    outputs.append(output_buffer[0:self.last_batch_size])
                 else:
-                    outputs.append(output_buffer)
-        
+                    if self.fill == True and i == len(self.batches) - 1:
+                        outputs.append(output_buffer[0:self.last_batch_size])
+                    else:
+                        outputs.append(output_buffer)
+
         result = self.__parse_prediction(outputs)
 
         del input_buffer
