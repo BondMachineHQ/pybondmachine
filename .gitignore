@@ -5,3 +5,4 @@ pybondmachine/prjmanager/__pycache__
 build
 dist
 reminder.txt
+.DS_Store

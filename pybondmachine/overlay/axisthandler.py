@@ -162,12 +162,13 @@ class AxiStreamHandler():
 
     def predict(self, debug=False):
 
+        latencies = []
+
         if self.model_specs['board'] in self.supported_boards['zynq']:
             outputs = []
             data_type_input, data_type_output = self.__get_dtype()
 
             input_buffer = allocate(shape=self.input_shape, dtype=data_type_input)
-            latencies = []
 
             for i in range(0, len(self.batches)):
                 input_buffer[:]=self.batches[i]
@@ -205,8 +206,14 @@ class AxiStreamHandler():
                 input_buffer[:]=self.batches[i]
                 output_buffer = allocate(shape=self.output_shape, dtype=data_type_output)
                 input_buffer.sync_to_device()
+                if debug:
+                    start_time = time.time()
                 bm_krnl.call(input_buffer, output_buffer)
                 output_buffer.sync_from_device()
+                if debug:
+                    end_time = time.time()
+                    time_diff = (end_time - start_time) * 1000
+                    latencies.append(time_diff)
 
                 if len(self.batches) == 1:
                     outputs.append(output_buffer)
@@ -216,6 +223,10 @@ class AxiStreamHandler():
                     else:
                         outputs.append(output_buffer)
 
+            if debug:
+                print("Time taken to predict a batch of size ", self.batch_size, " is ", np.mean(latencies), " ms")
+                print("Time taken to predict a single sample is ", np.mean(latencies)/self.batch_size, " ms")
+                
         result = self.__parse_prediction(outputs)
 
         del input_buffer

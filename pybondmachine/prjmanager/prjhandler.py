@@ -137,6 +137,8 @@ class BMProjectHandler():
             # TODO: add the command to build the firmware on the cloud
             print("To do")
 
+        return True, "Firmware built successfully"
+
     @handle_config_error
     def check_dependencies(self):
         return self.__check_dependencies()
