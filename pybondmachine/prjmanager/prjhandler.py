@@ -60,7 +60,7 @@ class BMProjectHandler():
     # 5. If there's an error while executing the command, it catches the exception and returns an error message.
     # 6. Finally, it checks if the project directory has been created. If it has, it returns a success message. If it hasn't, it returns an error message.
     
-    def __create_project(self, from_template=True):
+    def __create_project(self, from_template=True, target_board=None):
 
         # if the folder already exists, return an error message
         if (os.path.isdir(self.project_full_path)):
@@ -80,7 +80,12 @@ class BMProjectHandler():
                 # but be sure you are in the project path folder
                 os.chdir(self.project_path)
                 if (from_template):
-                    os.system("bmhelper create --project_name " + self.project_name + " --example proj_zedboard_ml_creation") # to change with the correct template example
+                    if (target_board == 'zedboard'):
+                        os.system("bmhelper create --project_name " + self.project_name + " --example proj_zedboard_ml_creation") # to change with the correct template example
+                    elif(target_board == 'alveou50'):
+                        os.system("bmhelper create --project_name " + self.project_name + " --example proj_alveou50_ml_accelerator")
+                    else:
+                        os.system("bmhelper create --project_name " + self.project_name + " --example proj_zedboard_ml_creation") 
                 else:
                     os.system("bmhelper create --project_name " + self.project_name) # to change with the correct template example
                     
@@ -130,7 +135,20 @@ class BMProjectHandler():
                 if "BondMachine tool not found" in cmd_output:
                     return False, "BondMachine tool not found. Please install the BondMachine framework"
 
-                os.system("make design_bitstream")
+                board_in_use = ''
+                with open(self.project_full_path+"/local.mk", 'r') as f:
+                    for line in f:
+                        if "BOARD" in line:
+                            board_in_use = line[line.index('=')+1:len(line)]
+                            break
+                
+                if (board_in_use.startswith("alveo")):
+                    os.system("make xclbin")
+                    # wip: create a json file that describes the accelerator properties
+                    # an example is under tests folder called "accelerator.json"
+                else:
+                    os.system("make design_bitstream")
+            
             except Exception as e:
                 return False, "Unable to build the firmware on local system. Error: "+str(e)    
         else:
@@ -144,8 +162,8 @@ class BMProjectHandler():
         return self.__check_dependencies()
     
     @handle_config_error
-    def create_project(self):
-        return self.__create_project()
+    def create_project(self, from_template=True, target_board=None):
+        return self.__create_project(from_template, target_board)
     
     @handle_config_error
     def build_firmware(self, oncloud=False):

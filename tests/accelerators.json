@@ -1,0 +1,30 @@
+{
+	"name": "bondmachine.xclbin",
+	"bitstreamId": "bondmachine",
+	"version": "1",
+	"platform": {
+		"vendor": "xilinx",
+		"name": "u50",
+		"version": "gen3x16_xdma_201920.3"
+	},
+	"kernels": [
+		{
+			"name": [
+				"bondmachine"
+			],
+			"kernelId": "bondmachine",
+			"arguments": [
+				{
+					"type": "float*",
+					"name": "a",
+					"access": "r"
+				},
+				{
+					"type": "float*",
+					"name": "b",
+					"access": "r"
+				}
+			]
+		}
+	]
+}

@@ -29,7 +29,7 @@ class NeuranNetworkHandler():
                     new_line = "NEURALBOND_ARGS=-config-file neuralbondconfig.json -operating-mode fragment -io-mode sync -data-type "+self.project_specs["data_type"]+" -register-size "+self.project_specs["register_size"]+"\n"
                     lines_to_save.append(new_line)
                 elif "SOURCE_NEURALBOND" in line:
-                    new_line = "SOURCE_NEURALBOND="+self.project_specs["source_neuralbond"]+"\n"
+                    new_line = "SOURCE_NEURALBOND=modelBM.json\n"
                     lines_to_save.append(new_line)
                 elif "BOARD" in line:
                     new_line = "BOARD="+self.project_specs["board"]+"\n"
@@ -64,7 +64,7 @@ class NeuranNetworkHandler():
             raise Exception("Source neural network file not found")
 
         # copy the source neural network file to the project path
-        os.system("cp "+self.project_specs["source_neuralbond"]+" "+self.project_path+"neuralbondconfig.json") 
+        os.system("cp "+self.project_specs["source_neuralbond"]+" "+self.project_path+"modelBM.json") 
 
         # set the project configurations file
         try:

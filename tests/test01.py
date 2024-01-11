@@ -15,17 +15,18 @@ output_path = os.getcwd()+"/tests/"
 # dump the json input file for neuralbond, the BM module that will be used to build the firmware
 mlp_tf2bm(model, output_file=output_file, output_path=output_path)
 
-prjHandler = BMProjectHandler("sample_project", "neuralnetwork", "projects_tests")
+prjHandler = BMProjectHandler("sample_project", "neuralnetwork", "/mlnotebook/projects_tests")
 
+target_board = 'zedboard'
 prjHandler.check_dependencies()
-prjHandler.create_project()
+prjHandler.create_project(from_template=True, target_board=target_board)
 
 config = {
     "data_type": "float16",
     "register_size": "16",
     "source_neuralbond": output_path+output_file,
     "flavor": "axist",
-    "board": "zedboard"
+    "board": target_board
 }
 
 prjHandler.setup_project(config)
