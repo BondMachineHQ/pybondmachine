@@ -17,9 +17,9 @@ mlp_tf2bm(model, output_file=output_file, output_path=output_path)
 
 prjHandler = BMProjectHandler("sample_project", "neuralnetwork", "/mlnotebook/projects_tests")
 
-target_board = 'zedboard'
-prjHandler.check_dependencies()
-prjHandler.create_project(from_template=True, target_board=target_board)
+target_board = 'zedboard' # the target board for the firmware
+prjHandler.check_dependencies() # check if the dependencies are installed
+prjHandler.create_project(from_template=True, target_board=target_board) # create the project
 
 config = {
     "data_type": "float16",
